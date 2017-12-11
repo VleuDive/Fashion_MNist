@@ -12,34 +12,49 @@ X = tf.placeholder(tf.float32, [None, 784])
 X_img = tf.reshape(X, [-1, 28, 28, 1])
 Y = tf.placeholder(tf.float32, [None, 10])
 
-W1 = tf.Variable(tf.random_normal([3, 3, 1, 32], stddev=0.01))
-L1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
-L1 = tf.nn.relu(L1)
-L1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
-L1 = tf.nn.relu(L1)
-L1 = tf.nn.max_pool(L1, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+with tf.name_scope("layer1") as scope:
+    W1 = tf.Variable(tf.random_normal([3, 3, 1, 32], stddev=0.01))
+    L1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
+    L1 = tf.nn.relu(L1)
+    L1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
+    L1 = tf.nn.relu(L1)
+    L1 = tf.nn.max_pool(L1, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+    W1_hist=tf.summary.histogram("weights1",W1)
+    L1_hist=tf.summary.histogram("Layer1",L1)
 
-W2 = tf.Variable(tf.random_normal([3, 3, 32, 64], stddev=0.01))
-L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
-L2 = tf.nn.relu(L2)
-L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
-L2 = tf.nn.relu(L2)
-L2 = tf.nn.max_pool(L2, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
-L2_flat = tf.reshape(L2, [-1, 7 * 7 * 64])
+with tf.name_scope("layer2") as scope:
+    W2 = tf.Variable(tf.random_normal([3, 3, 32, 64], stddev=0.01))
+    L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
+    L2 = tf.nn.relu(L2)
+    L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
+    L2 = tf.nn.relu(L2)
+    L2 = tf.nn.max_pool(L2, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+    L2_flat = tf.reshape(L2, [-1, 7 * 7 * 64])
+    W2_hist = tf.summary.histogram("weights2", W2)
+    L2_hist = tf.summary.histogram("Layer2", L2)
 
-W3 = tf.get_variable("W3", shape=[7 * 7 * 64, 10],initializer=tf.contrib.layers.xavier_initializer())
-b = tf.Variable(tf.random_normal([10]))
-logits = tf.matmul(L2_flat, W3) + b
+with tf.name_scope("layer3") as scope:
+    W3 = tf.get_variable("W3", shape=[7 * 7 * 64, 10],initializer=tf.contrib.layers.xavier_initializer())
+    b = tf.Variable(tf.random_normal([10]))
+    logits = tf.matmul(L2_flat, W3) + b
+    W3_hist = tf.summary.histogram("weights3", W3)
+    b_hist = tf.summary.histogram("bias", b)
+    logit_hist = tf.summary.histogram("logits",logits)
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+tf.summary.scalar("cost", cost)
+with tf.name_scope("optimizer") as scope:
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 is_correct=tf.equal(tf.argmax(logits,1),tf.argmax(Y,1))
-accuracy=tf.reduce_mean(tf.cast(is_correct,dtype=tf.float32))
-recall,rec_op=tf.metrics.recall(labels=Y,predictions=logits)
+with tf.name_scope("accuracy") as scope:
+    accuracy=tf.reduce_mean(tf.cast(is_correct,dtype=tf.float32))
+    acc_summ=tf.summary.scalar("accuracy",accuracy)
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
-sess.run(tf.local_variables_initializer())
 
+merged_summary = tf.summary.merge_all()
+writer = tf.summary.FileWriter("./logs/cnn_2")
+writer.add_graph(sess.graph)  # Show the graph
 print('Learning started. It takes sometime.')
 for epoch in range(training_epochs):
     avg_cost = 0
@@ -48,9 +63,9 @@ for epoch in range(training_epochs):
     for i in range(total_batch):
         batch_xs, batch_ys = fashion_mnist.train.next_batch(batch_size)
         feed_dict = {X: batch_xs, Y: batch_ys}
-        c, _ = sess.run([cost, optimizer], feed_dict=feed_dict)
-        avg_cost += c / total_batch
-
+        c, summary, _ = sess.run([cost,merged_summary, optimizer], feed_dict={X: batch_xs, Y: batch_ys})
+        writer.add_summary(summary, global_step=i)
+        avg_cost += sess.run(cost, feed_dict=feed_dict) / total_batch
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
 print("Accuracy: ",accuracy.eval(session=sess,feed_dict={X:fashion_mnist.test.images,Y:fashion_mnist.test.labels}))
 print('Learning Finished!')
