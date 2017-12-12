@@ -14,25 +14,25 @@ Y = tf.placeholder(tf.float32, [None, 10])
 
 with tf.name_scope("layer1") as scope:
     W1 = tf.Variable(tf.random_normal([3, 3, 1, 32], stddev=0.01))
-    L1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
-    L1 = tf.nn.relu(L1)
-    L1 = tf.nn.max_pool(L1, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+    Layer1 = tf.nn.conv2d(X_img, W1, strides=[1, 1, 1, 1], padding='SAME')
+    Layer1 = tf.nn.relu(Layer1)
+    Layer1 = tf.nn.max_pool(Layer1, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
     W1_hist=tf.summary.histogram("weights1",W1)
-    L1_hist=tf.summary.histogram("Layer1",L1)
+    Layer1_hist=tf.summary.histogram("Layer1",Layer1)
 
 with tf.name_scope("layer2") as scope:
     W2 = tf.Variable(tf.random_normal([3, 3, 32, 64], stddev=0.01))
-    L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
-    L2 = tf.nn.relu(L2)
-    L2 = tf.nn.max_pool(L2, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
-    L2_flat = tf.reshape(L2, [-1, 7 * 7 * 64])
+    Layer2 = tf.nn.conv2d(Layer1, W2, strides=[1, 1, 1, 1], padding='SAME')
+    Layer2 = tf.nn.relu(Layer2)
+    Layer2 = tf.nn.max_pool(Layer2, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+    Layer2_flat = tf.reshape(Layer2, [-1, 7 * 7 * 64])
     W2_hist = tf.summary.histogram("weights2", W2)
-    L2_hist = tf.summary.histogram("Layer2", L2)
+    Layer2_hist = tf.summary.histogram("Layer2", Layer2)
 
 with tf.name_scope("layer3") as scope:
     W3 = tf.get_variable("W3", shape=[7 * 7 * 64, 10],initializer=tf.contrib.layers.xavier_initializer())
     b = tf.Variable(tf.random_normal([10]))
-    logits = tf.matmul(L2_flat, W3) + b
+    logits = tf.matmul(Layer2_flat, W3) + b
     W3_hist = tf.summary.histogram("weights3", W3)
     b_hist = tf.summary.histogram("bias", b)
     logit_hist = tf.summary.histogram("logits",logits)
