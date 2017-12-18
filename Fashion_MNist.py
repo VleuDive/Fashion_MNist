@@ -1,4 +1,4 @@
-#2015104227 주가현 머신러닝 프로젝트
+#2015104227 주가현 머신러닝 프로젝트 
 #data is in data.vol1~data.vol6 in this repository. Data is compressed over 6 splitted egg files.
 #데이터 크기가 큰 관계로 데이터 폴더를 6개로 분할압축하여 이 파일과 같은 레포지터리에 업로드했습니다. 코드 실행 시 데이터 압축을 풀고 사용해주시기 바랍니다.
 import numpy as np
